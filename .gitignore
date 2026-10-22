@@ -1,0 +1,30 @@
+# Python virtual environments
+venv/
+.venv/
+*/venv/
+*/.venv/
+*/*/.venv/
+env/
+ENV/
+
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# Testing & Linting caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Antigravity agent scratch and generated directories
+.system_generated/
+scratch/
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
