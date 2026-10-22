@@ -671,3 +671,63 @@ hr{ border:none; border-top:1px solid var(--border-soft); margin:1.6rem 0; }
     font-family:'JetBrains Mono',monospace;
     letter-spacing:0.05em;
 }
+
+/* =====================================================
+   EXPANDED ENTERPRISE TOKENS & TABS
+===================================================== */
+
+.stTabs [data-baseweb="tab-list"] {
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 6px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+}
+
+.stTabs [data-baseweb="tab"] {
+    height: 44px;
+    border-radius: 10px;
+    color: var(--ink-soft);
+    font-weight: 600;
+    font-size: 14px;
+    padding: 0 18px;
+    transition: all 0.2s ease;
+}
+
+.stTabs [aria-selected="true"] {
+    background: var(--maroon) !important;
+    color: var(--ink) !important;
+    box-shadow: 0 4px 14px rgba(140, 28, 59, 0.4);
+}
+
+.priority-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.priority-pill.critical { background: var(--red-bg); color: var(--red); border: 1px solid rgba(245,100,107,0.3); }
+.priority-pill.high { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,165,36,0.3); }
+.priority-pill.medium { background: var(--accent-soft); color: var(--accent); border: 1px solid rgba(212,162,78,0.3); }
+.priority-pill.strength { background: var(--success-bg); color: var(--success); border: 1px solid rgba(61,220,151,0.3); }
+
+.rec-card {
+    background: var(--glass-strong);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+}
+.rec-card.critical { border-left: 4px solid var(--red); }
+.rec-card.high { border-left: 4px solid var(--amber); }
+.rec-card.medium { border-left: 4px solid var(--accent); }
+.rec-card.strength { border-left: 4px solid var(--success); }
+
+.rec-title { font-weight: 700; color: var(--ink); font-size: 14.5px; margin-bottom: 6px; }
+.rec-detail { color: var(--ink-soft); font-size: 13px; line-height: 1.5; margin-bottom: 4px; }
+.rec-action { color: var(--ink); font-size: 13px; margin-top: 6px; font-weight: 500; }
+

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scholariq"
+version = "2.0.0"
+description = "AI-Powered Student Academic Performance Analytics Platform"
+authors = [
+    { name = "Shaik-pardi-11" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "streamlit>=1.38.0",
+    "pandas>=2.2.3",
+    "numpy>=2.0.0",
+    "scikit-learn>=1.5.2",
+    "joblib>=1.4.2",
+    "matplotlib>=3.9.2",
+    "plotly>=5.24.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.5.0"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["AI_Student_performance_Analytics-main/Student-Performance-Prediction-System-main/tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
