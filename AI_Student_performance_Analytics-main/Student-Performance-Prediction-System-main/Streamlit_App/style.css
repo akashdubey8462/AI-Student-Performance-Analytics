@@ -782,4 +782,68 @@ hr{ border:none; border-top:1px solid var(--border-soft); margin:1.6rem 0; }
 .status-pill.completed { background: var(--success-bg); color: var(--success); border: 1px solid rgba(61,220,151,0.3); }
 .status-pill.overdue { background: var(--red-bg); color: var(--red); border: 1px solid rgba(245,100,107,0.3); }
 
+/* Academic Marking & Incomplete Scheme Styles */
+.incomplete-banner {
+    background: linear-gradient(135deg, rgba(245, 165, 36, 0.12), rgba(140, 28, 59, 0.18));
+    border: 1px solid rgba(245, 165, 36, 0.45);
+    border-radius: var(--radius-sm);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+}
+
+.incomplete-title {
+    font-family: 'Sora', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--amber);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.incomplete-body {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+}
+
+.calc-summary-card {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    margin-bottom: 14px;
+}
+
+.calc-summary-title {
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 8px;
+}
+
+.formula-badge {
+    background: rgba(212, 162, 78, 0.15);
+    color: var(--accent);
+    border: 1px solid rgba(212, 162, 78, 0.3);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+}
+
+.provisional-badge {
+    background: rgba(61, 220, 151, 0.15);
+    color: var(--success);
+    border: 1px solid rgba(61, 220, 151, 0.3);
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-family: 'Sora', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+
 

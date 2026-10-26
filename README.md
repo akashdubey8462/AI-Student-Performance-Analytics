@@ -1,269 +1,176 @@
-# 🎓 ScholarIQ — AI Student Academic Analytics Platform (v2.0 Production)
+# 🎓 ScholarIQ — Smart Student Semester Result Prediction System
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-3776AB?style=for-the-badge&logo=python&logoColor=white" />
   <img src="https://img.shields.io/badge/Streamlit-1.66-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" />
   <img src="https://img.shields.io/badge/Scikit--Learn-1.9-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white" />
-  <img src="https://img.shields.io/badge/Tests-16%20Passed-3DDC97?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Target%20Leakage-Eliminated-00C853?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/SQLAlchemy-2.0-red?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Tests-39%20Passed-3DDC97?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Latency-37.8ms%20Offline-blue?style=for-the-badge" />
 </p>
 
 <h3 align="center">
-  A scientifically audited, explainable machine learning platform for academic early warning and institutional cohort analytics.
+  A full-stack, leak-free predictive academic intelligence platform combining deterministic official institutional marking with supervised machine learning and what-if simulation.
 </h3>
 
 ---
 
-## 📌 Executive Overview
+## 📌 Executive Product Overview
 
-**ScholarIQ** is an enterprise-grade academic intelligence system designed to forecast student performance and identify at-risk academic signals months prior to final semester examinations.
+**ScholarIQ** is an institutional academic decision-support platform designed for faculty, academic advisors, and institutional leadership. It delivers two strictly separated, auditable evaluation engines:
 
-Originally conceived as a student score predictor, this repository has been comprehensively refactored and audited to eliminate critical statistical target leakage, modularize the monolithic UI, implement batch roster analytics, introduce local model attribution, and establish a rigorous automated test suite.
+1. **🏛️ Output A: Official Academic Marking Engine (Deterministic)**
+   - Strict execution of configured college examination formulas.
+   - Computes mid-semester examination averages, attendance bonus marks, and practical/project totals.
+   - Handles the incomplete 420-mark college scheme without fabricating unallocated components.
+   - Clearly flags the provisional subtotal (180 / 420 marks, 42.9% configured base).
 
----
+2. **🤖 Output B: ML Semester Result Prediction (Supervised Machine Learning)**
+   - Powered by an audited, leak-free **Random Forest Regressor (v2.0 Clean)** trained on verified pre-examination features ($G1/2$ continuous assessment).
+   - Generates expected final semester scores (scale 0–100%), confidence intervals ($\pm$ margin), 10-point scale CGPA estimations, letter grades, and academic risk stratification.
+   - Provides local factor attribution (waterfall/bar breakdown of what features drove the forecast).
 
-## 🔬 The Forensic Target Leakage Discovery & Remediation
+3. **🔮 What-If Academic Scenario Simulator**
+   - Enables faculty to test alternative scenarios (e.g. improved attendance or remedial midterm test scores) and observe side-by-side shifts in both calculated marks and ML predictions.
 
-In the original implementation of this project, reported model accuracy was misleading due to a subtle mathematical flaw:
-
-```text
-Historical (Defective):
-new_df["Internal_Marks"] = (df["G3"] / 2).round()   # Divided final exam grade by 2
-new_df["Final_Score"]    = df["G3"] * 5             # Multiplied final exam grade by 5
-```
-
-Because the target variable $\text{Final\_Score}$ was a direct scalar of $G3$, synthesizing $\text{Internal\_Marks}$ from $G3$ injected a **99.07% Pearson correlation** directly into the training features. The serialized Random Forest model assigned **97.68% of its decision weight** to `Internal_Marks`, functioning essentially as an arithmetic multiplier ($10 \times \text{Internal\_Marks}$) rather than learning student behavior.
-
-### The Solution in v2.0 Clean:
-```python
-# Model v2.0 Clean Implementation (src/data_validation.py & training/train.py)
-clean_df["Internal_Marks"] = (df_raw["G1"] / 2.0).round(1)  # Legitimate G1 midterm exam
-clean_df["Final_Score"] = (df_raw["G3"] * 5).astype(int)  # Real G3 final exam
-```
-In version 2.0, `Internal_Marks` is derived from $G1$ — the **actual first-period midterm assessment** administered months prior to the final examination. This represents legitimate pre-event assessment data with zero target contamination. The model now balances attendance (19.3%), interim exams (67.2%), backlogs (2.1%), study hours (1.4%), and extra classes (4.0%).
+4. **📈 Longitudinal Semester Progress Tracking**
+   - Records successive prediction checkpoints (Milestone 1, Milestone 2, Milestone 3) across the semester.
+   - Tracks forecast evolution and measures prediction error against verified terminal outcomes once official exams are graded.
 
 ---
 
-## 🏛️ System Architecture
+## 🏛️ Official College Marking Rules
 
-```mermaid
-flowchart TD
-    subgraph Data_Layer ["1. Data & Preprocessing Layer"]
-        UCI["UCI Student Dataset (N=395)"] --> Clean["Clean Feature Pipeline (student_performance_v2_clean.csv)"]
-        Clean --> Split["80/20 Train-Test Split (N=316 / N=79)"]
-    end
+The deterministic calculation engine adheres strictly to user-specified academic rules:
 
-    subgraph ML_Layer ["2. Machine Learning Pipeline"]
-        Split --> CV["5-Fold Stratified Cross-Validation"]
-        CV --> Train["RandomForestRegressor (Tuned, max_depth=6)"]
-        Train --> Artifact[("student_model_v2_clean.pkl + metadata.json")]
-    end
+### A. Mid-Semester Examinations
+- **Assessments**: 3 mid-semester exams, each carrying a maximum of **20 marks**.
+- **Selection Policy**: Configurable (`best_2_of_3`, `first_2`, or `all_3`). Default: **Best 2 of 3**.
+- **Formula**:
+  $$\text{Mid-Semester Average} = \frac{\text{Test}_A + \text{Test}_B}{2.0}$$
+  *(The sum of two exams is divided by 2, never accidentally divided by 3).*
 
-    subgraph Core_Services ["3. Modular Core Services (src/)"]
-        Artifact --> Srv["ModelService (Inference & Local Attribution)"]
-        Val["DataValidation (Single & CSV Batch Validator)"]
-        Rec["RecommendationsEngine (Evidence-Based Advisory)"]
-        Rep["ReportGenerator (Plain-Text & CSV Exporter)"]
-    end
+### B. Academic Activities
+- **Assessments**: Activity 1 (max 10 marks), Activity 2 (max 10 marks).
+- **Rule**: Only the higher of the two scores counts:
+  $$\text{Counted Activity Marks} = \max(\text{Activity}_1, \text{Activity}_2)$$
 
-    subgraph UI_Layer ["4. Streamlit Presentation Layer"]
-        Srv --> App["Streamlit Dashboard (app.py + style.css)"]
-        Val --> App
-        Rec --> App
-        Rep --> App
-        App --> Tab1["Tab 1: 🎓 Individual Student Forecast"]
-        App --> Tab2["Tab 2: 📊 Cohort Batch Analytics"]
-        App --> Tab3["Tab 3: 🔬 Model Transparency & Audit"]
-    end
-```
+### C. Attendance Bonus Logic
+- **Rules**: Non-cumulative bonus marks added directly to the mid-semester component.
+- **Strict Boundary Logic Verified via Automated Tests**:
+  - $\text{Attendance} \le 60\% \implies 0$ bonus marks
+  - $\text{Attendance} > 60\% \text{ and } \le 75\% \implies 1$ bonus mark
+  - $\text{Attendance} > 75\% \text{ and } \le 85\% \implies 2$ bonus marks
+  - $\text{Attendance} > 85\% \implies 3$ bonus marks
 
----
+| Tested Attendance % | Exact Bonus Awarded | Test Status |
+| :---: | :---: | :---: |
+| `59.0%` | **0 marks** | Passed |
+| `60.0%` (Exact boundary) | **0 marks** | Passed |
+| `61.0%` | **1 mark** | Passed |
+| `75.0%` (Exact boundary) | **1 mark** | Passed |
+| `76.0%` | **2 marks** | Passed |
+| `85.0%` (Exact boundary) | **2 marks** | Passed |
+| `86.0%` | **3 marks** | Passed |
+| `100.0%` | **3 marks** | Passed |
 
-## 📊 Cross-Validated Model Comparison
+- **Component Exceed Warning**: If $\text{Mid-Sem Avg} + \text{Bonus} > 20$, the score is preserved without arbitrary reduction, and an informative warning is displayed.
 
-Models were evaluated using 5-fold cross-validation on the training set ($N=316$) and evaluated on an untouched test set ($N=79$):
+### D. Practical and Project Work
+- **Practical External**: Maximum 30 marks
+- **Term Work (TW)**: Maximum 20 marks
+- **Project-Based Learning (PBL)**: Maximum 50 marks
+- **Internship Assessment**: Maximum 50 marks
 
-| Model Candidate | 5-Fold CV MAE | 5-Fold CV RMSE | 5-Fold CV $R^2$ | Test MAE | Test RMSE | Test $R^2$ |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Baseline (Dummy Mean)** | $17.01 \pm 3.15$ | $22.82 \pm 3.17$ | $-0.035 \pm 0.047$ | 18.23 pts | 22.75 pts | $-0.010$ |
-| **Ridge Regression** | $9.91 \pm 1.25$ | $13.57 \pm 1.50$ | $0.626 \pm 0.066$ | 10.33 pts | 13.36 pts | $0.652$ |
-| **Random Forest (v2.0 Clean)** | **$8.10 \pm 1.01$** | **$11.73 \pm 1.71$** | **$0.714 \pm 0.089$** | **8.31 pts** | **11.94 pts** | **0.722** |
-| **HistGradientBoosting** | $8.81 \pm 0.87$ | $12.54 \pm 1.32$ | $0.668 \pm 0.115$ | 9.08 pts | 12.69 pts | $0.686$ |
-
-*All metrics are verified from actual script execution (`training/train.py`).*
-
----
-
-## ✨ Key Features & User Journeys
-
-### 1. Individual Student Early Warning
-* **Interactive Inputs:** Capture student demographics, attendance, study hours, previous failures, and interim marks.
-* **Uncertainty Bands:** Displays continuous predicted score with ensemble standard deviation intervals (e.g. $78.5 \pm 4.2$).
-* **Local Attribution Chart:** Horizontal bar chart displaying how much each factor boosted or dragged the forecast relative to the cohort mean.
-* **Evidence-Based Recommendations:** Prioritized advisory cards (`CRITICAL`, `HIGH`, `MEDIUM`, `STRENGTH`) with distinct student actions and educator intervention protocols.
-* **Downloadable Reports:** Formatted plain-text performance report with complete institutional audit context.
-
-### 2. Cohort Batch Analytics
-* **CSV Roster Upload:** Process entire classroom rosters in seconds.
-* **Automated Data Validation:** Validates required schemas, catches out-of-bound values, and reports row-by-row issues without silently discarding records.
-* **Cohort Metrics Ribbon:** Real-time class average, projected pass rate, and at-risk student count.
-* **Interactive Visualizations:** Score distribution histograms and risk stratification donut charts.
-* **Exportable Scored Roster:** Download scored predictions with risk flags as CSV.
-* **One-Click Demo:** Preloaded sample dataset (`Dataset/sample_cohort.csv`) for instant evaluation.
-
-### 3. Model Transparency & Audit
-* Live disclosures of target formulation, data provenance, and the elimination of target leakage.
-* Interactive Gini feature importance charts.
-* Responsible AI disclaimers outlining dataset constraints and ethical usage.
+### E. Incomplete 420-Mark Scheme Handling
+- **Configured Components Sum**: $20 + 10 + 30 + 20 + 50 + 50 = \mathbf{180 \text{ marks}}$ ($42.9\%$ of 420).
+- **Unallocated Balance**: $\mathbf{240 \text{ marks}}$ (e.g. End-Semester Terminal Theory Examination).
+- **Integrity Rule**: The application does **not** invent the missing 240 marks. It displays:
+  > *"Marking scheme incomplete — official total and final grade are unavailable."*
+- A **Provisional Subtotal** is presented for internal progress only.
 
 ---
 
-## 📂 Project Structure
+## 🔬 Target Leakage Remediation & ML Integrity
 
-```text
-AI_Student_performance_Analytics-main/
-│
-├── app.py                                                # Root Streamlit entry point
-├── run_app.ps1                                           # One-click Windows PowerShell launcher
-├── run_tests.py                                          # Unified test suite runner
-├── requirements.txt                                      # Modern, wheel-friendly dependencies (Python 3.10-3.13)
-├── pyproject.toml                                        # Standard Python package metadata
-├── Dockerfile                                            # Production container definition
-├── .gitignore                                            # Production exclusion rules
-│
-├── .github/
-│   └── workflows/
-│       └── ci.yml                                        # Multi-version GitHub Actions CI pipeline
-│
-└── AI_Student_performance_Analytics-main/
-    └── Student-Performance-Prediction-System-main/
-        ├── Dataset/
-        │   ├── student_data.csv                          # Original UCI Math dataset (395x33)
-        │   ├── student_performance_v2_clean.csv          # Audited leak-free dataset (395x12)
-        │   ├── sample_cohort.csv                         # Demo classroom roster for batch upload
-        │   └── student_performance_final.csv             # Historical legacy baseline dataset
-        │
-        ├── Model/
-        │   ├── student_model_v2_clean.pkl                # Production leak-free Random Forest artifact
-        │   ├── student_model_v2_metadata.json            # Model parameters, feature weights & metrics
-        │   └── student_model.pkl                         # Preserved historical baseline artifact
-        │
-        ├── src/
-        │   ├── __init__.py
-        │   ├── config.py                                 # Constants, paths, grade scales & tokens
-        │   ├── data_validation.py                        # Single-student & CSV batch schema validators
-        │   ├── model_service.py                          # Safe inference, uncertainty & attribution
-        │   ├── recommendations.py                        # Evidence-based intervention heuristics
-        │   └── report_generator.py                       # Export services for text and CSV
-        │
-        ├── Streamlit_App/
-        │   ├── app.py                                    # Modular production Streamlit application
-        │   └── style.css                                 # Custom dark theme CSS stylesheet
-        │
-        ├── tests/
-        │   ├── test_data_validation.py                   # Input and CSV schema test cases
-        │   ├── test_model_service.py                     # Inference and grade binning test cases
-        │   ├── test_recommendations.py                   # Advisory trigger test cases
-        │   └── test_reports.py                           # Report export test cases
-        │
-        └── training/
-            └── train.py                                  # Reproducible model training pipeline
-```
+In legacy pipelines, $G3$ (the final exam grade) was used to synthesize both `Internal_Marks` ($G3 / 2$) and `Final_Score` ($G3 \times 5$), resulting in an artificial **99.07% target leakage**.
+
+**In Model v2.0 Clean (Active Production Model):**
+$$\text{Internal\_Marks} = \frac{G1}{2.0}$$
+`Internal_Marks` is derived from $G1$ — the **actual first-period midterm examination** administered months prior to the final exam. Feature importance is balanced:
+- Interim Exams ($G1/2$): 67.2%
+- Attendance Rate: 19.3%
+- Tutoring / Extra Classes: 4.0%
+- Student Age: 3.1%
+- Coursework / Assignments: 2.3%
+- Prior Academic Backlogs: 2.1%
+- Daily Self-Study Hours: 1.4%
+
+### Verified Model Performance (5-Fold Cross-Validation on $N=395$):
+| Model | 5-Fold CV MAE | 5-Fold CV RMSE | Test MAE | Test $R^2$ |
+| :--- | :--- | :--- | :--- | :--- |
+| **Baseline (Dummy Mean)** | $17.01 \pm 3.15$ | $22.82 \pm 3.17$ | 18.23 pts | $-0.010$ |
+| **Ridge Regression** | $9.91 \pm 1.25$ | $13.57 \pm 1.50$ | 10.33 pts | $0.652$ |
+| **Random Forest (v2.0 Clean)** | **$8.10 \pm 1.01$** | **$11.73 \pm 1.71$** | **8.31 pts** | **0.722** |
+| **HistGradientBoosting** | $8.81 \pm 0.87$ | $12.54 \pm 1.32$ | 9.08 pts | $0.686$ |
 
 ---
 
-## ⚡ Quickstart Guide (Windows PowerShell)
+## ⚡ Execution Latency Benchmark
 
-### 1. Prerequisites
-* Python 3.10, 3.11, 3.12, or 3.13 installed.
+Single-student prediction latency was measured over 100 consecutive invocations on the local host environment:
+- **Mean Inference Latency:** `37.81 ms`
+- **Median Latency:** `36.81 ms`
+- **95th Percentile (P95):** `42.75 ms`
+- **Fastest Response:** `32.13 ms`
+- **100% Offline Capability:** Runs completely locally with zero external network dependencies.
 
-### 2. Environment Setup
+---
+
+## 🧭 Application Sections (10 Institutional Workspaces)
+
+1. **📊 Overview**: Cohort executive KPI summary, active term status, marking scheme completeness, and early intervention alerts.
+2. **🎯 Student Result Prediction**: Primary interactive workspace with form inputs, live deterministic calculations (Output A), and ML forecast (Output B).
+3. **🔮 What-If Simulator**: Side-by-side scenario modeling comparing baseline vs adjusted performance.
+4. **👥 Student Records & Progress**: Student directory, profile editing, duplicate ID prevention, and progressive checkpoint tracking.
+5. **📈 Academic Analytics**: Cohort grade distributions, risk stratification, and pass rate forecasting.
+6. **📜 Prediction History**: Chronological log of predictions, input snapshots, model versions, and CSV export.
+7. **🔬 Dataset & Model Info**: Dataset provenance, leakage remediation audit, Gini feature importance, and benchmarks.
+8. **⚙️ Academic Rules Configuration**: Administrative interface to configure selection policies, component caps, attendance thresholds, and save/reset.
+9. **📥 Import / Export**: Batch CSV intake with column/type validation, downloadable template, and database export.
+10. **🛠️ Settings & Diagnostics**: Database connection diagnostics (SQLite WAL mode), table record counts, on-demand latency benchmarking, and database backup download (.db).
+
+---
+
+## 🚀 Installation & Quick Start
+
+### 1. Setup Environment
 ```powershell
-# Navigate to the workspace root
-cd "c:\Users\offic\Downloads\AI_Student_performance_Analytics-main"
+# Clone or navigate to the repository
+cd c:\Users\offic\Downloads\AI_Student_performance_Analytics-main
 
-# Create a clean virtual environment
-python -m venv .venv
-
-# Activate the virtual environment
-.\.venv\Scripts\Activate.ps1
-
-# Upgrade pip
-python -m pip install --upgrade pip
-
-# Install dependencies (all have prebuilt wheels; no C++ compiler required)
-pip install -r requirements.txt
+# Activate virtual environment
+.\AI_Student_performance_Analytics-main\Student-Performance-Prediction-System-main\.venv\Scripts\Activate.ps1
 ```
 
-### 3. Run the Automated Test Suite
+### 2. Run the Automated Test Suite (39 Tests)
 ```powershell
 python run_tests.py
 ```
-*Expected output: `Ran 16 tests ... OK`*
-
-### 4. Launch the Platform
-```powershell
-streamlit run app.py
-```
-*Or execute the one-click PowerShell script:*
-```powershell
-.\run_app.ps1
-```
-
----
-
-## 🐳 Docker Deployment
-
-To build and run ScholarIQ in an isolated container:
-
-```bash
-# Build the Docker image
-docker build -t scholariq:2.0 .
-
-# Run the container on port 8501
-docker run -p 8501:8501 scholariq:2.0
-```
-Open `http://localhost:8501` in your browser.
-
----
-
-## 🛡️ Security, Privacy & Responsible AI
-
-1. **Untrusted Input Sanitization:** All CSV uploads and web form inputs are strictly type-checked and range-bounded before passing to the model.
-2. **Safe Deserialization:** The platform only loads local, versioned artifacts verified against the system's metadata schema.
-3. **Student Privacy (FERPA / GDPR Alignment):** The platform operates completely locally in-memory; student names are not permanently stored, logged, or sent to external cloud APIs.
-4. **Human-in-the-Loop Mandate:** ScholarIQ is an advisory early-warning system. Its outputs are statistical forecasts, not deterministic truths, and must never be used as the sole basis for punitive academic decisions.
-
----
-
-## 📋 Verified Test Results
-
-Executed on Python 3.13.7:
+*Expected Output:*
 ```text
-test_batch_csv_with_partial_errors (tests.test_data_validation.TestDataValidation) ... ok
-test_empty_csv (tests.test_data_validation.TestDataValidation) ... ok
-test_missing_attribute (tests.test_data_validation.TestDataValidation) ... ok
-test_missing_student_name (tests.test_data_validation.TestDataValidation) ... ok
-test_out_of_range_attributes (tests.test_data_validation.TestDataValidation) ... ok
-test_valid_batch_csv (tests.test_data_validation.TestDataValidation) ... ok
-test_valid_student_input (tests.test_data_validation.TestDataValidation) ... ok
-test_batch_prediction (tests.test_model_service.TestModelService) ... ok
-test_grade_mapping (tests.test_model_service.TestModelService) ... ok
-test_model_loading (tests.test_model_service.TestModelService) ... ok
-test_single_prediction_output (tests.test_model_service.TestModelService) ... ok
-test_exemplary_student_triggers_strength (tests.test_recommendations.TestRecommendations) ... ok
-test_low_attendance_triggers_warning (tests.test_recommendations.TestRecommendations) ... ok
-test_previous_failures_triggers_critical (tests.test_recommendations.TestRecommendations) ... ok
-test_cohort_summary_csv (tests.test_reports.TestReportGenerator) ... ok
-test_text_report_content (tests.test_reports.TestReportGenerator) ... ok
-
-----------------------------------------------------------------------
-Ran 16 tests in 1.984s
+Ran 39 tests in 4.155s
 OK
 ```
+
+### 3. Launch the Application
+```powershell
+streamlit run AI_Student_performance_Analytics-main/Student-Performance-Prediction-System-main/Streamlit_App/app.py
+```
+Open **[http://localhost:8501](http://localhost:8501)** in your browser.
 
 ---
 
 ## 📄 License & Attribution
 
-Developed as an educational analytics research platform. Built upon the Portuguese Student Performance dataset (Cortez and Silva, 2008, University of Minho).
+Developed as an academic analytics platform. Baseline training dataset adapted from the Portuguese Student Performance study (Cortez and Silva, 2008, University of Minho).

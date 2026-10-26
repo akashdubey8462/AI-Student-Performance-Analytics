@@ -1,7 +1,7 @@
 """ScholarIQ Student Management Service.
 Handles student profile queries, academic directory search, and enrollment records.
 """
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from sqlalchemy.orm import joinedload
 from ..database.connection import get_db_session
 from ..database.models import Student, Enrollment, Course, Prediction, Intervention, AuditLog
@@ -152,3 +152,86 @@ def create_student(
         ))
 
         return {"id": student.id, "student_id": student.student_id, "name": student.name}
+
+
+def check_duplicate_student_id(student_id: str, exclude_id: Optional[int] = None) -> bool:
+    """Check if a student_id already exists in the database."""
+    with get_db_session() as session:
+        query = session.query(Student).filter_by(student_id=student_id.strip())
+        if exclude_id is not None:
+            query = query.filter(Student.id != exclude_id)
+        return query.first() is not None
+
+
+def update_student_profile(
+    student_db_id: int,
+    name: str,
+    gender: int,
+    age: int,
+    student_id: Optional[str] = None,
+    user_id: Optional[int] = None
+) -> Tuple[bool, str]:
+    """Update student demographic fields with duplicate checking and audit logging."""
+    with get_db_session() as session:
+        student = session.query(Student).filter_by(id=student_db_id).first()
+        if not student:
+            return False, f"Student with ID {student_db_id} not found."
+
+        if student_id and student_id.strip() != student.student_id:
+            if check_duplicate_student_id(student_id, exclude_id=student_db_id):
+                return False, f"Student ID '{student_id.strip()}' is already in use by another student."
+            student.student_id = student_id.strip()
+
+        student.name = name.strip()
+        student.gender = gender
+        student.age = age
+
+        session.add(AuditLog(
+            user_id=user_id,
+            action="UPDATE_STUDENT_PROFILE",
+            entity_type="STUDENT",
+            entity_id=student.id,
+            details_json=f'{{"student_id": "{student.student_id}", "name": "{student.name}"}}'
+        ))
+
+        return True, "Student profile updated successfully."
+
+
+def update_student_enrollment(
+    student_db_id: int,
+    attendance: float,
+    internal_marks: float,
+    assignments: int,
+    study_hours: float,
+    failures: int,
+    extra_classes: int,
+    actual_final_score: Optional[float] = None,
+    user_id: Optional[int] = None
+) -> Tuple[bool, str]:
+    """Update student continuous assessment signals and recorded actual final score."""
+    with get_db_session() as session:
+        student = session.query(Student).filter_by(id=student_db_id).first()
+        if not student or not student.enrollments:
+            return False, "Enrollment record not found for student."
+
+        enrollment = student.enrollments[0]
+        enrollment.attendance_percentage = float(attendance)
+        enrollment.internal_marks = float(internal_marks)
+        enrollment.assignments_submitted = int(assignments)
+        enrollment.self_study_hours = float(study_hours)
+        enrollment.previous_failures = int(failures)
+        enrollment.extra_classes = int(extra_classes)
+        if actual_final_score is not None:
+            enrollment.final_score = float(actual_final_score)
+
+        session.add(AuditLog(
+            user_id=user_id,
+            action="UPDATE_ENROLLMENT_ASSESSMENT",
+            entity_type="ENROLLMENT",
+            entity_id=enrollment.id,
+            details_json=f'{{"student_id": "{student.student_id}", "actual_score": {actual_final_score}}}'
+        ))
+
+        return True, "Assessment record updated successfully."
+
+

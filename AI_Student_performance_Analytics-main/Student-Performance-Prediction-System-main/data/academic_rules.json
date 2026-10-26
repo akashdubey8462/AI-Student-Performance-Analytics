@@ -1,0 +1,49 @@
+{
+  "total_target_marks": 420.0,
+  "midsem": {
+    "max_marks_per_exam": 20.0,
+    "selection_policy": "best_2_of_3",
+    "weight_in_total": 20.0,
+    "mandatory": true
+  },
+  "attendance": {
+    "thresholds": [
+      {
+        "min_pct": 85.0,
+        "bonus": 3
+      },
+      {
+        "min_pct": 75.0,
+        "bonus": 2
+      },
+      {
+        "min_pct": 60.0,
+        "bonus": 1
+      }
+    ],
+    "default_bonus": 0,
+    "add_to": "midsem"
+  },
+  "activities": {
+    "max_marks_per_activity": 10.0,
+    "selection_rule": "higher_of_two",
+    "weight_in_total": 10.0,
+    "mandatory": true
+  },
+  "practical_external": {
+    "max_marks": 30.0,
+    "mandatory": true
+  },
+  "term_work": {
+    "max_marks": 20.0,
+    "mandatory": true
+  },
+  "pbl": {
+    "max_marks": 50.0,
+    "mandatory": true
+  },
+  "internship": {
+    "max_marks": 100.0,
+    "mandatory": true
+  }
+}

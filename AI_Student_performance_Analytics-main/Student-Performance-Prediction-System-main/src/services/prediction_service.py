@@ -1,5 +1,5 @@
-"""ScholarIQ Prediction and Analytics Service.
-Handles prediction persistence, model version routing, and executive KPIs.
+"""ScholarIQ Prediction, Analytics and Semester Progress Tracking Service.
+Handles prediction persistence, model version routing, longitudinal checkpoints, and executive KPIs.
 """
 import json
 import pandas as pd
@@ -15,15 +15,19 @@ def save_prediction(
     student_db_id: int,
     features: Dict[str, Any],
     model_version_tag: str = "v2.0-clean",
+    checkpoint_name: str = "Standard Assessment",
     user_id: Optional[int] = None
 ) -> Dict[str, Any]:
-    """Execute model inference and persist the prediction record with an immutable feature snapshot."""
+    """Execute model inference and persist the prediction record with an immutable feature snapshot and checkpoint."""
     # Choose engine key
     engine_key = "v2_clean" if "v2" in model_version_tag else "legacy_v1"
     service = ModelService(model_version=engine_key)
 
     input_df = pd.DataFrame([{col: features[col] for col in FEATURE_COLUMNS}])[FEATURE_COLUMNS]
     res = service.predict_single(input_df)
+
+    snapshot_payload = dict(features)
+    snapshot_payload["checkpoint_name"] = checkpoint_name
 
     with get_db_session() as session:
         model_ver = session.query(ModelVersion).filter_by(version_tag=model_version_tag).first()
@@ -39,7 +43,7 @@ def save_prediction(
             score_upper=res["score_upper"],
             grade=res["grade"],
             risk_level=res["risk_level"],
-            feature_snapshot_json=json.dumps(features),
+            feature_snapshot_json=json.dumps(snapshot_payload),
             created_at=datetime.now(timezone.utc)
         )
         session.add(pred)
@@ -65,11 +69,13 @@ def save_prediction(
             details_json=json.dumps({
                 "student_id": student_db_id,
                 "score": res["predicted_score"],
-                "model": model_version_tag
+                "model": model_version_tag,
+                "checkpoint": checkpoint_name
             })
         ))
 
         res["prediction_db_id"] = pred.id
+        res["checkpoint_name"] = checkpoint_name
         return res
 
 
@@ -102,6 +108,7 @@ def list_predictions(
                 "grade": p.grade,
                 "risk_level": p.risk_level,
                 "model_version": model.version_tag if model else "v2.0-clean",
+                "checkpoint": snapshot.get("checkpoint_name", "Standard Checkpoint"),
                 "attendance": snapshot.get("Attendance_Percentage", "—"),
                 "internal_marks": snapshot.get("Internal_Marks", "—"),
                 "failures": snapshot.get("Previous_Failures", "—"),
@@ -109,6 +116,87 @@ def list_predictions(
             })
 
         return results
+
+
+def get_student_prediction_timeline(student_db_id: int) -> List[Dict[str, Any]]:
+    """Retrieve chronological prediction checkpoints for a student to track semester progress.
+    Compares successive forecasts and tracks error against actual final outcome if recorded.
+    """
+    with get_db_session() as session:
+        student = session.query(Student).filter_by(id=student_db_id).first()
+        if not student:
+            return []
+
+        actual_outcome = None
+        if student.enrollments and student.enrollments[0].final_score is not None:
+            actual_outcome = student.enrollments[0].final_score
+
+        preds = sorted(student.predictions, key=lambda x: x.created_at)
+        timeline = []
+        prev_score = None
+
+        for idx, p in enumerate(preds, 1):
+            snapshot = json.loads(p.feature_snapshot_json) if p.feature_snapshot_json else {}
+            chk_name = snapshot.get("checkpoint_name", f"Checkpoint {idx}")
+            
+            delta = round(p.predicted_score - prev_score, 1) if prev_score is not None else 0.0
+            prev_score = p.predicted_score
+            
+            error = None
+            if actual_outcome is not None:
+                error = round(abs(p.predicted_score - actual_outcome), 1)
+
+            timeline.append({
+                "checkpoint_index": idx,
+                "checkpoint_name": chk_name,
+                "predicted_score": p.predicted_score,
+                "score_lower": p.score_lower,
+                "score_upper": p.score_upper,
+                "confidence_margin": p.confidence_margin,
+                "grade": p.grade,
+                "risk_level": p.risk_level,
+                "delta_from_previous": delta,
+                "actual_outcome": actual_outcome,
+                "prediction_error": error,
+                "created_at": p.created_at.strftime("%Y-%m-%d %H:%M")
+            })
+
+        return timeline
+
+
+def record_actual_outcome(
+    student_db_id: int,
+    actual_score: float,
+    user_id: Optional[int] = None
+) -> Dict[str, Any]:
+    """Record verified final semester score in enrollment for accuracy tracking."""
+    if actual_score < 0.0 or actual_score > 100.0:
+        raise ValueError(f"Actual score must be between 0.0 and 100.0, received {actual_score}")
+
+    with get_db_session() as session:
+        student = session.query(Student).filter_by(id=student_db_id).first()
+        if not student or not student.enrollments:
+            raise ValueError(f"Student #{student_db_id} has no enrolled course record")
+
+        enrollment = student.enrollments[0]
+        enrollment.final_score = float(actual_score)
+
+        session.add(AuditLog(
+            user_id=user_id,
+            action="RECORD_ACTUAL_OUTCOME",
+            entity_type="ENROLLMENT",
+            entity_id=enrollment.id,
+            details_json=json.dumps({
+                "student_id": student.student_id,
+                "actual_score": actual_score
+            })
+        ))
+
+        return {
+            "student_id": student.student_id,
+            "name": student.name,
+            "actual_final_score": actual_score
+        }
 
 
 def get_overview_kpis() -> Dict[str, Any]:
@@ -130,7 +218,7 @@ def get_overview_kpis() -> Dict[str, Any]:
             if latest_preds else 0.0
         )
         at_risk = sum(1 for p in latest_preds if p.risk_level == "High Academic Risk")
-        passing_cnt = sum(1 for p in latest_preds if p.predicted_score >= 50.0)
+        passing_cnt = sum(1 for p in latest_preds if p.predicted_score >= 40.0)
         pass_rate = (passing_cnt / len(latest_preds) * 100.0) if latest_preds else 0.0
 
         # Interventions
