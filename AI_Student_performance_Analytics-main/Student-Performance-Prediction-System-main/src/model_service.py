@@ -1,5 +1,5 @@
 """ScholarIQ Model Service Module.
-Handles versioned artifact loading, inference, uncertainty bounds, local feature contributions,
+Handles versioned artifact loading, inference, uncertainty bounds, heuristic feature attributions,
 and execution latency benchmarking.
 """
 from typing import Dict, Any, Tuple, Optional, List
@@ -56,7 +56,7 @@ class ModelService:
             self.model = None
 
     def predict_single(self, input_df: pd.DataFrame) -> Dict[str, Any]:
-        """Run single-student inference with prediction, grade, uncertainty, and feature contribution."""
+        """Run single-student inference with prediction, grade, uncertainty bounds, and feature attribution."""
         if self.model is None:
             raise RuntimeError(f"Model service is unavailable: {self.load_error}")
             
@@ -82,6 +82,9 @@ class ModelService:
             "uncertainty_margin": round(uncertainty, 1),
             "score_lower": max(0.0, round(score - uncertainty, 1)),
             "score_upper": min(100.0, round(score + uncertainty, 1)),
+            "uncertainty_method": "Heuristic Empirical Interval (Tree Standard Error)",
+            "attribution_method": "Heuristic Feature Attribution (Normalized Deviations × Tree Weights)",
+            "causal_disclaimer": "Statistical correlation does not establish causal necessity. Recommended interventions should be evaluated in context by academic advisors.",
             "grade": grade_info["grade"],
             "performance": grade_info["performance"],
             "badge_color": grade_info["badge"],

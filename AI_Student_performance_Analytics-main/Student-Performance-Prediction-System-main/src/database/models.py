@@ -87,6 +87,17 @@ class Enrollment(Base):
     previous_failures = Column(Integer, nullable=False, default=0)
     extra_classes = Column(Integer, nullable=False, default=0)
     
+    # Continuous assessment specific scores
+    midsem_1 = Column(Float, nullable=True)
+    midsem_2 = Column(Float, nullable=True)
+    midsem_3 = Column(Float, nullable=True)
+    activity_1 = Column(Float, nullable=True)
+    activity_2 = Column(Float, nullable=True)
+    practical_score = Column(Float, nullable=True)
+    term_work_score = Column(Float, nullable=True)
+    pbl_score = Column(Float, nullable=True)
+    internship_score = Column(Float, nullable=True)
+
     # Observed outcome (populated once final exam is graded)
     final_score = Column(Float, nullable=True)
     created_at = Column(DateTime, default=utc_now)
@@ -117,6 +128,9 @@ class Prediction(Base):
     id = Column(Integer, primary_key=True, index=True)
     student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
     model_version_id = Column(Integer, ForeignKey("model_versions.id"), nullable=False, index=True)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=True, index=True)
+    term_id = Column(Integer, ForeignKey("terms.id"), nullable=True, index=True)
+    checkpoint_name = Column(String(100), nullable=True, default="Standard Assessment")
     
     predicted_score = Column(Float, nullable=False)
     confidence_margin = Column(Float, nullable=False, default=5.0)
@@ -125,12 +139,20 @@ class Prediction(Base):
     grade = Column(String(10), nullable=False)
     risk_level = Column(String(30), nullable=False)
     
+    # Uncertainty methodology & outcome verification
+    uncertainty_method = Column(String(100), nullable=False, default="Heuristic Empirical Interval (±5.0)")
+    actual_final_score = Column(Float, nullable=True)
+    actual_grade = Column(String(10), nullable=True)
+    error_residual = Column(Float, nullable=True)
+    
     # Auditable snapshot of input features at prediction time
     feature_snapshot_json = Column(Text, nullable=False)
     created_at = Column(DateTime, default=utc_now, index=True)
 
     student = relationship("Student", back_populates="predictions")
     model_version = relationship("ModelVersion", back_populates="predictions")
+    course = relationship("Course")
+    term = relationship("Term")
 
 
 class Intervention(Base):

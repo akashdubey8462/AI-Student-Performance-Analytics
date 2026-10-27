@@ -48,12 +48,14 @@ def save_academic_rules(new_rules: Dict[str, Any]) -> Tuple[bool, str, Dict[str,
 
 def reset_academic_rules() -> Dict[str, Any]:
     """Reset configuration to institutional default rules."""
-    if RULES_FILE_PATH.exists():
-        try:
-            os.remove(RULES_FILE_PATH)
-        except OSError:
-            pass
-    return deepcopy(DEFAULT_ACADEMIC_RULES)
+    defaults = deepcopy(DEFAULT_ACADEMIC_RULES)
+    try:
+        RULES_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(RULES_FILE_PATH, "w", encoding="utf-8") as f:
+            json.dump(defaults, f, indent=2)
+    except Exception:
+        pass
+    return defaults
 
 
 def validate_academic_rules(rules: Dict[str, Any]) -> tuple:

@@ -6,26 +6,44 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    env:
+      DATABASE_URL: "sqlite:///:memory:"
+      SCHOLARIQ_ENV: "test"
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+        cache: 'pip'
 
-    - name: Install dependencies
+    - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Run Test Suite
+    - name: Syntax and Code Integrity Verification
+      run: |
+        python -m compileall -q AI_Student_performance_Analytics-main/Student-Performance-Prediction-System-main/src
+        python -m compileall -q AI_Student_performance_Analytics-main/Student-Performance-Prediction-System-main/tests
+
+    - name: Run Hermetic Test Suite (49 Automated Tests)
       run: |
         python run_tests.py
+
+    - name: Application Smoke Test (Model Inference & Integrity)
+      run: |
+        python -c "import sys; from pathlib import Path; sys.path.insert(0, str(Path.cwd() / 'AI_Student_performance_Analytics-main' / 'Student-Performance-Prediction-System-main')); from src.model_service import ModelService; svc = ModelService('v2_clean'); print('Model smoke check succeeded:', svc.version)"

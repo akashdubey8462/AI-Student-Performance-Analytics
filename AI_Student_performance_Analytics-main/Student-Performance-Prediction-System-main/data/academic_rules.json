@@ -43,7 +43,56 @@
     "mandatory": true
   },
   "internship": {
-    "max_marks": 100.0,
+    "max_marks": 50.0,
     "mandatory": true
+  },
+  "grading_scale": {
+    "scale_type": "10_point_cgpa",
+    "unconfirmed": true,
+    "passing_threshold_pct": 40.0,
+    "bands": [
+      {
+        "min_pct": 90.0,
+        "grade": "O",
+        "grade_point": 10.0,
+        "desc": "Outstanding"
+      },
+      {
+        "min_pct": 80.0,
+        "grade": "A+",
+        "grade_point": 9.0,
+        "desc": "Excellent"
+      },
+      {
+        "min_pct": 70.0,
+        "grade": "A",
+        "grade_point": 8.0,
+        "desc": "Very Good"
+      },
+      {
+        "min_pct": 60.0,
+        "grade": "B+",
+        "grade_point": 7.0,
+        "desc": "Good"
+      },
+      {
+        "min_pct": 50.0,
+        "grade": "B",
+        "grade_point": 6.0,
+        "desc": "Above Average"
+      },
+      {
+        "min_pct": 40.0,
+        "grade": "C",
+        "grade_point": 5.0,
+        "desc": "Pass"
+      },
+      {
+        "min_pct": 0.0,
+        "grade": "F",
+        "grade_point": 0.0,
+        "desc": "Fail"
+      }
+    ]
   }
 }

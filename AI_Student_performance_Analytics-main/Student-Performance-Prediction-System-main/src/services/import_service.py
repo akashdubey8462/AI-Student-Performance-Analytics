@@ -65,6 +65,18 @@ def import_roster_transactional(
 
         # Active ML model for automated scoring
         active_model = session.query(ModelVersion).filter_by(is_active=True).first()
+        if not active_model:
+            active_model = ModelVersion(
+                version_tag="v2.0-clean",
+                algorithm="RandomForestRegressor (Tuned, max_depth=6)",
+                artifact_path="data/student_model_v2_clean.pkl",
+                cv_r2=0.714,
+                test_mae=8.31,
+                is_active=True
+            )
+            session.add(active_model)
+            session.flush()
+
         model_service = ModelService(model_version="v2_clean")
 
         created_students = 0
@@ -110,7 +122,9 @@ def import_roster_transactional(
             margin = 4.5
             pred_record = Prediction(
                 student_id=student.id,
-                model_version_id=active_model.id if active_model else 1,
+                model_version_id=active_model.id,
+                course_id=course.id,
+                checkpoint_name="Batch Roster Ingestion",
                 predicted_score=pred_score,
                 confidence_margin=margin,
                 score_lower=round(max(0.0, pred_score - margin), 1),

@@ -1,8 +1,68 @@
 {
   "model_version": "2.0-clean",
-  "created_at": "2026-10-22T14:02:46.686526",
-  "target": "Final_Score (scale 0-100, mapped from UCI G3*5)",
-  "target_leakage_status": "VERIFIED_CLEAN (Internal_Marks derived from G1 interim exam, not G3)",
+  "created_at": "2026-10-27T10:27:27.952643+00:00",
+  "model_provenance": "RESEARCH_BASELINE_UCI_PORTUGUESE",
+  "provenance_details": {
+    "dataset_source": "UCI Machine Learning Repository - Student Performance Dataset (Cortez and Silva, 2008)",
+    "original_context": "Secondary education (High School) Portuguese language course at two Portuguese schools",
+    "intended_purpose": "Research benchmark baseline only. NOT a validated university semester result predictor.",
+    "features": {
+      "Gender": {
+        "source_column": "sex",
+        "type": "Recorded",
+        "transformation": "Binary encoded: M -> 1, F -> 0",
+        "college_availability": "Available upon enrollment"
+      },
+      "Age": {
+        "source_column": "age",
+        "type": "Recorded",
+        "transformation": "Integer pass-through (15-22)",
+        "college_availability": "Available upon enrollment"
+      },
+      "Self_Study_Hours": {
+        "source_column": "studytime",
+        "type": "Constructed Proxy",
+        "transformation": "Categorical studytime mapped to continuous weekly hours: 1->1.5h, 2->3.0h, 3->5.0h, 4->7.0h",
+        "college_availability": "Self-reported survey metric"
+      },
+      "Previous_Failures": {
+        "source_column": "failures",
+        "type": "Recorded",
+        "transformation": "Integer count of previous class failures (0-3)",
+        "college_availability": "Available from institutional academic history (backlogs)"
+      },
+      "Extra_Classes": {
+        "source_column": "schoolsup",
+        "type": "Recorded",
+        "transformation": "Extra educational school support: yes -> 1, no -> 0",
+        "college_availability": "Recorded remedial course attendance"
+      },
+      "Attendance_Percentage": {
+        "source_column": "absences",
+        "type": "Constructed Proxy",
+        "transformation": "Calculated as (100.0 - absences), clipped between 20.0% and 100.0%",
+        "college_availability": "Recorded biometric / LMS attendance percentage"
+      },
+      "Assignments_Submitted": {
+        "source_column": "studytime, higher, internet, activities",
+        "type": "Synthetic Composite Proxy",
+        "transformation": "(studytime*1.5 + higher*2.0 + internet*1.5 + activities*1.0) clipped [1, 10]",
+        "college_availability": "Recorded LMS assignment count"
+      },
+      "Internal_Marks": {
+        "source_column": "G1",
+        "type": "Domain-Transformed Proxy",
+        "transformation": "First period Portuguese grade (0-20 scale) divided by 2.0 (0-10 scale). G2 and G3 excluded to prevent target leakage.",
+        "college_availability": "Mid-semester examination average"
+      }
+    },
+    "target": {
+      "training_target": "G3 * 5 (0-100 scale, final secondary school Portuguese grade)",
+      "intended_college_target": "End-of-semester composite score based on Mid-Semesters, Activities, External Practical (30), Term Work (20), PBL (50), and Internship (50)",
+      "validity_note": "Predictions from this model reflect high-school language performance correlations and must be explicitly labelled as a Research Baseline rather than a validated college engineering result."
+    }
+  },
+  "selection_protocol": "5-Fold Cross-Validation on Training Split Only (No Test Peeking)",
   "algorithm": "RandomForestRegressor",
   "parameters": {
     "bootstrap": true,
@@ -45,13 +105,81 @@
     "Gender": 0.0056
   },
   "metrics": {
-    "cv_5fold_mae": "8.10 \u00b1 1.01",
-    "cv_5fold_rmse": "11.73 \u00b1 1.71",
-    "cv_5fold_r2": "0.714 \u00b1 0.089",
+    "cv_mae": 8.1,
+    "cv_mae_std": 1.01,
+    "cv_rmse": 11.73,
+    "cv_rmse_std": 1.71,
+    "cv_r2": 0.714,
+    "cv_r2_std": 0.089,
     "test_mae": 8.31,
     "test_rmse": 11.94,
-    "test_r2": 0.722
+    "test_r2": 0.722,
+    "empirical_margin_80pct": 12.76
   },
-  "training_samples": 316,
-  "test_samples": 79
+  "subgroup_error_analysis": {
+    "gender_Male": {
+      "sample_size": 41,
+      "mae": 8.45,
+      "r2": 0.647
+    },
+    "gender_Female": {
+      "sample_size": 38,
+      "mae": 8.16,
+      "r2": 0.764
+    },
+    "attendance_gte_75": {
+      "sample_size": 78,
+      "mae": 8.41
+    },
+    "attendance_lt_75": {
+      "sample_size": 1,
+      "mae": 0.38
+    },
+    "no_previous_failures": {
+      "sample_size": 65,
+      "mae": 8.73
+    },
+    "has_previous_failures": {
+      "sample_size": 14,
+      "mae": 6.34
+    }
+  },
+  "all_cv_benchmarks": [
+    {
+      "model_name": "Baseline (Dummy Mean)",
+      "cv_mae_mean": 17.01,
+      "cv_mae_std": 3.15,
+      "cv_rmse_mean": 22.82,
+      "cv_rmse_std": 3.17,
+      "cv_r2_mean": -0.035,
+      "cv_r2_std": 0.047
+    },
+    {
+      "model_name": "Ridge Regression",
+      "cv_mae_mean": 9.91,
+      "cv_mae_std": 1.25,
+      "cv_rmse_mean": 13.57,
+      "cv_rmse_std": 1.5,
+      "cv_r2_mean": 0.626,
+      "cv_r2_std": 0.066
+    },
+    {
+      "model_name": "Random Forest (Tuned)",
+      "cv_mae_mean": 8.1,
+      "cv_mae_std": 1.01,
+      "cv_rmse_mean": 11.73,
+      "cv_rmse_std": 1.71,
+      "cv_r2_mean": 0.714,
+      "cv_r2_std": 0.089
+    },
+    {
+      "model_name": "HistGradientBoosting",
+      "cv_mae_mean": 8.81,
+      "cv_mae_std": 0.87,
+      "cv_rmse_mean": 12.54,
+      "cv_rmse_std": 1.32,
+      "cv_r2_mean": 0.668,
+      "cv_r2_std": 0.115
+    }
+  ]
 }
